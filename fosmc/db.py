@@ -1,5 +1,6 @@
 import os
 
+from slugify import slugify
 import yaml
 
 
@@ -21,21 +22,108 @@ def load_data(path):
     return db
 
 
-def load_cities(path, db):
-    filename = os.path.join(path, 'cities.yaml')
+def _populate_slug_and_name(obj):
+    if 'slug' not in obj:
+        # Generate slug from name if slug not present.
+        obj['slug'] = slugify(obj['name'].decode('utf8'))
+    elif 'name' not in obj:
+        # Name not given, only slug; copy slug into name and tag for lint.
+        obj['name'] = obj['slug']
+        obj['lint_name_from_slug'] = True
 
+def _store_replacement(obj_dict, obj):
+    if obj['slug'] in obj_dict:
+        obj['lint_replaces'] = obj_dict[obj['slug']]  # Tag for lint.
+
+
+def load_cities(path, db):
+    with open(os.path.join(path, 'cities.yaml')) as f:
+        for city in yaml.load_all(f):
+            _populate_slug_and_name(city)
+            _store_replacement(db['city'], city)
+            db['city'][city['slug']] = city
 
 def load_genres(path, db):
-    filename = os.path.join(path, 'genres.yaml')
+    aliases = set()
+    with open(os.path.join(path, 'genres.yaml')) as f:
+        for genre in yaml.load_all(f):
+            _populate_slug_and_name(genre)
+            _store_replacement(db['genre'], genre)
+            db['genre'][genre['slug']] = genre
+            aliases.update(slugify(alias.decode('utf8')) for alias in genre.get('aliases', []))
+    for genre in db['genre'].values():
+        if genre['slug'] in aliases:
+            # Name of one genre is alias of another; tag for lint.
+            genre['lint_is_also_alias'] = True
 
 
 def load_djs(path, db):
-    filename = os.path.join(path, 'djs.yaml')
+    with open(os.path.join(path, 'djs.yaml')) as f:
+        for dj in yaml.load_all(f):
+            _populate_slug_and_name(dj)
+            _store_replacement(db['dj'], dj)
+            db['dj'][dj['slug']] = dj
 
 
 def load_events(path, db):
-    filename = os.path.join(path, 'events.yaml')
+    with open(os.path.join(path, 'events.yaml')) as f:
+        for event in yaml.load_all(f):
+            _populate_slug_and_name(event)
+            _store_replacement(db['event'], event)
+            db['event'][event['slug']] = event
 
 
 def load_recordings(path, db):
-    filename = os.path.join(path, 'recordings.yaml')
+    with open(os.path.join(path, 'recordings.yaml')) as f:
+        for recording in yaml.load_all(f):
+            recording.setdefault('name', 'Recording')
+            # Convert single DJ to list of one DJ.
+            djs = recording.setdefault('djs', [])
+            if 'dj' in recording:
+                djs.append(recording.pop('dj'))
+            # Generate slug if not present.
+            if 'slug' not in recording:
+                slugs = []
+                if 'event' in recording:
+                    slugs.append(slugify(recording['event'].decode('utf8')))
+                if len(djs) == 1:
+                    slugs.append(slugify(recording['djs'][0].decode('utf8')))
+                elif len(djs) > 1:
+                    slugs.append('multiple')
+                slugs.append(slugify(recording['name'].decode('utf8')))
+                if 'date' in recording:
+                    slugs.append(recording['date'].strftime('%Y-%m-%d'))
+                recording['slug'] = '_'.join(slugs)
+            _store_replacement(db['recording'], recording)
+            db['recording'][recording['slug']] = recording
+            # Auto-create other objects based on information present.
+            # Normalize references to other objects to slugs.
+            for dj in djs:
+                if slugify(dj.decode('utf8')) not in db['dj']:
+                    djslug = slugify(dj.decode('utf8'))
+                    db['dj'][djslug] = dict(
+                        name=dj,
+                        slug=djslug,
+                        lint_created_by_recording=recording['slug'],
+                    )
+            recording['djs'] = [slugify(dj.decode('utf8')) for dj in recording['djs']]
+            if 'event' in recording:
+                event = recording['event']
+                eventslug = slugify(event.decode('utf8'))
+                if eventslug not in db['event']:
+                    db['event'][eventslug] = dict(
+                        name=event,
+                        slug=eventslug,
+                        lint_created_by_recording=recording['slug'],
+                    )
+                recording['event'] = eventslug
+            if 'genre' in recording:
+                genre = recording['genre']
+                genreslug = slugify(genre.decode('utf8'))
+                if genreslug not in db['genre']:
+                    db['genre'][genreslug] = dict(
+                        name=genre,
+                        slug=genreslug,
+                        lint_created_by_recording=recording['slug'],
+                    )
+                recording['genre'] = genreslug
