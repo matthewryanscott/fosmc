@@ -7,7 +7,7 @@ import jinja2
 from jinja2.exceptions import TemplateNotFound
 from slugify import slugify
 
-from .db import load_data
+from fosmc.db import load_data
 
 
 def main():

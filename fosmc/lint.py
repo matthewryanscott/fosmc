@@ -1,6 +1,6 @@
 import sys
 
-from .db import load_data
+from fosmc.db import load_data
 
 
 def main():
