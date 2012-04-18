@@ -1,7 +1,14 @@
 import os
 
-from slugify import slugify
+from slugify import slugify as _slugify
 import yaml
+
+
+def slugify(value):
+    if isinstance(value, unicode):
+        return _slugify(value)
+    else:
+        return _slugify(value.decode('utf8'))
 
 
 def load_data(path):
@@ -19,6 +26,7 @@ def load_data(path):
     load_djs(path, db)
     load_events(path, db)
     load_recordings(path, db)
+    denormalize(db)
     return db
 
 
@@ -45,7 +53,7 @@ def load_djs(path, db):
             db['dj'][dj['slug']] = dj
             if 'city' in dj:
                 city = dj['city']
-                cityslug = slugify(city.decode('utf8'))
+                cityslug = slugify(city)
                 if cityslug not in db['city']:
                     db['city'][cityslug] = dict(
                         name=city,
@@ -61,7 +69,7 @@ def load_djs(path, db):
                 genres.append(dj.pop('genre'))
             genreslugs = []
             for genre in genres:
-                genreslug = slugify(genre.decode('utf8'))
+                genreslug = slugify(genre)
                 if genreslug not in db['genre']:
                     db['genre'][genreslug] = dict(
                         name=genre,
@@ -82,7 +90,7 @@ def load_events(path, db):
             db['event'][event['slug']] = event
             if 'city' in event:
                 city = event['city']
-                cityslug = slugify(city.decode('utf8'))
+                cityslug = slugify(city)
                 if cityslug not in db['city']:
                     db['city'][cityslug] = dict(
                         name=city,
@@ -107,12 +115,12 @@ def load_recordings(path, db):
             if 'slug' not in recording:
                 slugs = []
                 if 'event' in recording:
-                    slugs.append(slugify(recording['event'].decode('utf8')))
+                    slugs.append(slugify(recording['event']))
                 if len(djs) == 1:
-                    slugs.append(slugify(recording['djs'][0].decode('utf8')))
+                    slugs.append(slugify(recording['djs'][0]))
                 elif len(djs) > 1:
                     slugs.append('multiple')
-                slugs.append(slugify(recording['name'].decode('utf8')))
+                slugs.append(slugify(recording['name']))
                 if recording['date']:
                     slugs.append(recording['date'].strftime('%Y-%m-%d'))
                 recording['slug'] = '_'.join(slugs)
@@ -121,7 +129,7 @@ def load_recordings(path, db):
             # Auto-create other objects based on information present.
             # Normalize references to other objects to slugs.
             for dj in djs:
-                djslug = slugify(dj.decode('utf8'))
+                djslug = slugify(dj)
                 if djslug not in db['dj']:
                     db['dj'][djslug] = dict(
                         name=dj,
@@ -130,10 +138,10 @@ def load_recordings(path, db):
                     )
                 dj_recordings = db['dj'][djslug].setdefault('recordings', [])
                 dj_recordings.append(recording['slug'])
-            recording['djs'] = [slugify(dj.decode('utf8')) for dj in recording['djs']]
+            recording['djs'] = [slugify(dj) for dj in recording['djs']]
             if 'city' in recording:
                 city = recording['city']
-                cityslug = slugify(city.decode('utf8'))
+                cityslug = slugify(city)
                 if cityslug not in db['city']:
                     db['city'][cityslug] = dict(
                         name=city,
@@ -145,7 +153,7 @@ def load_recordings(path, db):
                 city_recordings.append(recording['slug'])
             if 'event' in recording:
                 event = recording['event']
-                eventslug = slugify(event.decode('utf8'))
+                eventslug = slugify(event)
                 if eventslug not in db['event']:
                     db['event'][eventslug] = dict(
                         name=event,
@@ -161,7 +169,7 @@ def load_recordings(path, db):
                 genres.append(recording.pop('genre'))
             genreslugs = []
             for genre in genres:
-                genreslug = slugify(genre.decode('utf8'))
+                genreslug = slugify(genre)
                 if genreslug not in db['genre']:
                     db['genre'][genreslug] = dict(
                         name=genre,
@@ -174,10 +182,20 @@ def load_recordings(path, db):
             recording['genres'] = genreslugs
 
 
+def denormalize(db):
+    # Recording genres contribute to DJ genres.
+    for recording in db['recording'].itervalues():
+        for djslug in recording['djs']:
+            dj = db['dj'][djslug]
+            for genreslug in recording['genres']:
+                if genreslug not in dj['genres']:
+                    dj['genres'].append(genreslug)
+
+
 def _populate_slug_and_name(obj):
     if 'slug' not in obj:
         # Generate slug from name if slug not present.
-        obj['slug'] = slugify(obj['name'].decode('utf8'))
+        obj['slug'] = slugify(obj['name'])
     elif 'name' not in obj:
         # Name not given, only slug; copy slug into name and tag for lint.
         obj['name'] = obj['slug']
