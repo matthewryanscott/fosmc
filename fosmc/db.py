@@ -22,20 +22,6 @@ def load_data(path):
     return db
 
 
-def _populate_slug_and_name(obj):
-    if 'slug' not in obj:
-        # Generate slug from name if slug not present.
-        obj['slug'] = slugify(obj['name'].decode('utf8'))
-    elif 'name' not in obj:
-        # Name not given, only slug; copy slug into name and tag for lint.
-        obj['name'] = obj['slug']
-        obj['lint_name_from_slug'] = True
-
-def _store_replacement(obj_dict, obj):
-    if obj['slug'] in obj_dict:
-        obj['lint_replaces'] = obj_dict[obj['slug']]  # Tag for lint.
-
-
 def load_cities(path, db):
     with open(os.path.join(path, 'cities.yaml')) as f:
         for city in yaml.load_all(f):
@@ -63,6 +49,18 @@ def load_djs(path, db):
             _populate_slug_and_name(dj)
             _store_replacement(db['dj'], dj)
             db['dj'][dj['slug']] = dj
+            if 'city' in dj:
+                city = dj['city']
+                cityslug = slugify(city.decode('utf8'))
+                if cityslug not in db['city']:
+                    db['city'][cityslug] = dict(
+                        name=city,
+                        slug=cityslug,
+                        lint_created_by_dj=dj['slug'],
+                    )
+                dj['city'] = cityslug
+                city_djs = db['city'][cityslug].setdefault('djs', [])
+                city_djs.append(dj['slug'])
 
 
 def load_events(path, db):
@@ -71,12 +69,25 @@ def load_events(path, db):
             _populate_slug_and_name(event)
             _store_replacement(db['event'], event)
             db['event'][event['slug']] = event
+            if 'city' in event:
+                city = event['city']
+                cityslug = slugify(city.decode('utf8'))
+                if cityslug not in db['city']:
+                    db['city'][cityslug] = dict(
+                        name=city,
+                        slug=cityslug,
+                        lint_created_by_event=event['slug'],
+                    )
+                event['city'] = cityslug
+                city_events = db['city'][cityslug].setdefault('events', [])
+                city_events.append(event['slug'])
 
 
 def load_recordings(path, db):
     with open(os.path.join(path, 'recordings.yaml')) as f:
         for recording in yaml.load_all(f):
             recording.setdefault('name', 'Recording')
+            recording.setdefault('date', None)
             # Convert single DJ to list of one DJ.
             djs = recording.setdefault('djs', [])
             if 'dj' in recording:
@@ -91,7 +102,7 @@ def load_recordings(path, db):
                 elif len(djs) > 1:
                     slugs.append('multiple')
                 slugs.append(slugify(recording['name'].decode('utf8')))
-                if 'date' in recording:
+                if recording['date']:
                     slugs.append(recording['date'].strftime('%Y-%m-%d'))
                 recording['slug'] = '_'.join(slugs)
             _store_replacement(db['recording'], recording)
@@ -99,14 +110,28 @@ def load_recordings(path, db):
             # Auto-create other objects based on information present.
             # Normalize references to other objects to slugs.
             for dj in djs:
-                if slugify(dj.decode('utf8')) not in db['dj']:
-                    djslug = slugify(dj.decode('utf8'))
+                djslug = slugify(dj.decode('utf8'))
+                if djslug not in db['dj']:
                     db['dj'][djslug] = dict(
                         name=dj,
                         slug=djslug,
                         lint_created_by_recording=recording['slug'],
                     )
+                dj_recordings = db['dj'][djslug].setdefault('recordings', [])
+                dj_recordings.append(recording['slug'])
             recording['djs'] = [slugify(dj.decode('utf8')) for dj in recording['djs']]
+            if 'city' in recording:
+                city = recording['city']
+                cityslug = slugify(city.decode('utf8'))
+                if cityslug not in db['city']:
+                    db['city'][cityslug] = dict(
+                        name=city,
+                        slug=cityslug,
+                        lint_created_by_recording=recording['slug'],
+                    )
+                recording['city'] = cityslug
+                city_recordings = db['city'][cityslug].setdefault('recordings', [])
+                city_recordings.append(recording['slug'])
             if 'event' in recording:
                 event = recording['event']
                 eventslug = slugify(event.decode('utf8'))
@@ -117,6 +142,8 @@ def load_recordings(path, db):
                         lint_created_by_recording=recording['slug'],
                     )
                 recording['event'] = eventslug
+                event_recordings = db['event'][eventslug].setdefault('recordings', [])
+                event_recordings.append(recording['slug'])
             if 'genre' in recording:
                 genre = recording['genre']
                 genreslug = slugify(genre.decode('utf8'))
@@ -127,3 +154,20 @@ def load_recordings(path, db):
                         lint_created_by_recording=recording['slug'],
                     )
                 recording['genre'] = genreslug
+                genre_recordings = db['genre'][genreslug].setdefault('recordings', [])
+                genre_recordings.append(recording['slug'])
+
+
+def _populate_slug_and_name(obj):
+    if 'slug' not in obj:
+        # Generate slug from name if slug not present.
+        obj['slug'] = slugify(obj['name'].decode('utf8'))
+    elif 'name' not in obj:
+        # Name not given, only slug; copy slug into name and tag for lint.
+        obj['name'] = obj['slug']
+        obj['lint_name_from_slug'] = True
+
+
+def _store_replacement(obj_dict, obj):
+    if obj['slug'] in obj_dict:
+        obj['lint_replaces'] = obj_dict[obj['slug']]  # Tag for lint.
