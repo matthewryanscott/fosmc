@@ -61,6 +61,23 @@ def load_djs(path, db):
                 dj['city'] = cityslug
                 city_djs = db['city'][cityslug].setdefault('djs', [])
                 city_djs.append(dj['slug'])
+            # Normalize 'genre' to 'genres'.
+            genres = dj.setdefault('genres', [])
+            if 'genre' in dj:
+                genres.append(dj.pop('genre'))
+            genreslugs = []
+            for genre in genres:
+                genreslug = slugify(genre.decode('utf8'))
+                if genreslug not in db['genre']:
+                    db['genre'][genreslug] = dict(
+                        name=genre,
+                        slug=genreslug,
+                        lint_created_by_dj=dj['slug'],
+                    )
+                genreslugs.append(genreslug)
+                genredjs = db['genre'][genreslug].setdefault('djs', [])
+                genredjs.append(dj['slug'])
+            dj['genres'] = genreslugs
 
 
 def load_events(path, db):
