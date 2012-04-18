@@ -155,8 +155,12 @@ def load_recordings(path, db):
                 recording['event'] = eventslug
                 event_recordings = db['event'][eventslug].setdefault('recordings', [])
                 event_recordings.append(recording['slug'])
+            # Normalize 'genre' to 'genres'.
+            genres = recording.setdefault('genres', [])
             if 'genre' in recording:
-                genre = recording['genre']
+                genres.append(recording.pop('genre'))
+            genreslugs = []
+            for genre in genres:
                 genreslug = slugify(genre.decode('utf8'))
                 if genreslug not in db['genre']:
                     db['genre'][genreslug] = dict(
@@ -164,9 +168,10 @@ def load_recordings(path, db):
                         slug=genreslug,
                         lint_created_by_recording=recording['slug'],
                     )
-                recording['genre'] = genreslug
-                genre_recordings = db['genre'][genreslug].setdefault('recordings', [])
-                genre_recordings.append(recording['slug'])
+                genreslugs.append(genreslug)
+                genrerecordings = db['genre'][genreslug].setdefault('recordings', [])
+                genrerecordings.append(recording['slug'])
+            recording['genres'] = genreslugs
 
 
 def _populate_slug_and_name(obj):
