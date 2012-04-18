@@ -1,6 +1,6 @@
 from operator import itemgetter
 import os
-from shutil import rmtree
+from shutil import copytree, rmtree
 import sys
 
 import jinja2
@@ -58,7 +58,8 @@ def main():
     with open(os.path.join(output_path, 'index.html'), 'wb') as f:
         print 'index.html'
         f.write(template.render(
-            # No context.
+            root='./',
+            static='static/',
         ))
     # Create lists and details.
     for data_type in db:
@@ -82,6 +83,8 @@ def main():
                 print '{data_type}/index.html'.format(**locals())
                 f.write(template.render(
                     object_list=object_list,
+                    root='../',
+                    static='../static/',
                 ))
         # Details.
         template = jinja_env.get_template('{data_type}.html'.format(**locals()))
@@ -96,7 +99,14 @@ def main():
                 print '{data_type}/{filename}'.format(**locals())
                 f.write(template.render(
                     obj=obj,
+                    root='../',
+                    static='../static/',
                 ))
+    # Copy static files.
+    print 'static/*'
+    static_path = os.path.join(db_path, 'static')
+    static_output_path = os.path.join(output_path, 'static')
+    copytree(static_path, static_output_path)
     sys.exit(0)
 
 
