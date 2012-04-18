@@ -30,17 +30,11 @@ def load_cities(path, db):
             db['city'][city['slug']] = city
 
 def load_genres(path, db):
-    aliases = set()
     with open(os.path.join(path, 'genres.yaml')) as f:
         for genre in yaml.load_all(f):
             _populate_slug_and_name(genre)
             _store_replacement(db['genre'], genre)
             db['genre'][genre['slug']] = genre
-            aliases.update(slugify(alias.decode('utf8')) for alias in genre.get('aliases', []))
-    for genre in db['genre'].values():
-        if genre['slug'] in aliases:
-            # Name of one genre is alias of another; tag for lint.
-            genre['lint_is_also_alias'] = True
 
 
 def load_djs(path, db):
