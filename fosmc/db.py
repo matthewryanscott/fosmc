@@ -202,6 +202,14 @@ def denormalize(db):
                 cityrecordings = db['city'][cityslug].setdefault('recordings', [])
                 if recordingslug not in cityrecordings:
                     cityrecordings.append(recordingslug)
+    # Event cities contribute event's recordings to city's recordings.
+    for event in db['event'].itervalues():
+        cityslug = event.get('city', None)
+        if cityslug is not None:
+            for recordingslug in event.get('recordings', []):
+                cityrecordings = db['city'][cityslug].setdefault('recordings', [])
+                if recordingslug not in cityrecordings:
+                    cityrecordings.append(recordingslug)
 
 
 def _populate_slug_and_name(obj):
