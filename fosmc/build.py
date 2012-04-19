@@ -1,3 +1,4 @@
+import datetime
 from operator import itemgetter
 import os
 from shutil import copytree, rmtree
@@ -40,10 +41,10 @@ def main():
             jinja_env.globals[name.strip()] = value.strip()
     # Common functions.
     def dateformat(date, format='%Y-%m-%d'):
-        if hasattr(date, 'strftime'):
+        if isinstance(date, datetime.date):
             return date.strftime(format)
         else:
-            return ''
+            return str(date)
     def slugname(slug, data_type):
         """Convert a slug to a name."""
         return db[data_type][slugify(slug.decode('utf8'))]['name']

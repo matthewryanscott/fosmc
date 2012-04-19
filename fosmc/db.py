@@ -1,3 +1,4 @@
+import datetime
 import os
 
 from slugify import slugify as _slugify
@@ -122,7 +123,10 @@ def load_recordings(path, db):
                     slugs.append('multiple')
                 slugs.append(slugify(recording['name']))
                 if recording['date']:
-                    slugs.append(recording['date'].strftime('%Y-%m-%d'))
+                    if isinstance(recording['date'], datetime.date):
+                        slugs.append(recording['date'].strftime('%Y-%m-%d'))
+                    else:
+                        slugs.append(str(recording['date']))
                 recording['slug'] = '_'.join(slugs)
             _store_replacement(db['recording'], recording)
             db['recording'][recording['slug']] = recording
