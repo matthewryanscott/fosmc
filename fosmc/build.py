@@ -34,6 +34,8 @@ def main():
     jinja_env = jinja2.Environment(
         loader=jinja2.FileSystemLoader(template_path),
     )
+    jinja_env.globals['list'] = list
+    jinja_env.globals['reversed'] = reversed
     # Set up command line variables as globals.
     for arg in sys.argv[3:]:
         if '=' in arg:
@@ -56,11 +58,17 @@ def main():
     jinja_env.filters['slugobjects'] = slugobjects
     # Create index file.
     template = jinja_env.get_template('index.html')
+    recordings_by_date = sorted(
+        db['recording'].itervalues(),
+        key=lambda v: str(v['date']) if 'date' in v else None,
+    )
+    recordings_by_date = [r for r in recordings_by_date if r.get('date', None)]
     with open(os.path.join(output_path, 'index.html'), 'wb') as f:
         print 'index.html'
         f.write(template.render(
             root='./',
             static='static/',
+            recordings_by_date=recordings_by_date,
         ))
     # Create lists and details.
     for data_type in db:
