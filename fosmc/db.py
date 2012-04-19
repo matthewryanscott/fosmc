@@ -86,7 +86,15 @@ def load_djs(path, db):
 def load_events(path, db):
     with open(os.path.join(path, 'events.yaml')) as f:
         for event in yaml.load_all(f):
-            _populate_slug_and_name(event)
+            if 'slug' not in event:
+                event['slug'] = slugify(event['name'])
+                date = event.get('date', None)
+                if date:
+                    event['slug'] += '-'
+                    if isinstance(date, datetime.date):
+                        event['slug'] += date.strftime('%Y-%m-%d')
+                    else:
+                        event['slug'] += str(date)
             _store_replacement(db['event'], event)
             db['event'][event['slug']] = event
             if 'city' in event:
