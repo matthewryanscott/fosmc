@@ -194,6 +194,14 @@ def denormalize(db):
             for genreslug in recording['genres']:
                 if genreslug not in dj['genres']:
                     dj['genres'].append(genreslug)
+    # DJ cities contribute DJ's recordings to city's recordings.
+    for dj in db['dj'].itervalues():
+        cityslug = dj.get('city', None)
+        if cityslug is not None:
+            for recordingslug in dj['recordings']:
+                cityrecordings = db['city'][cityslug].setdefault('recordings', [])
+                if recordingslug not in cityrecordings:
+                    cityrecordings.append(recordingslug)
 
 
 def _populate_slug_and_name(obj):
