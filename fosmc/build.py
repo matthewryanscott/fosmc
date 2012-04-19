@@ -47,6 +47,9 @@ def main():
             return date.strftime(format)
         else:
             return str(date)
+    def maybealias(slug, data_type):
+        """Convert a slug of an alias to the original slug."""
+        return db[data_type][slug].get('alias_for', slug)
     def slugname(slug, data_type):
         """Convert a slug to a name."""
         return db[data_type][slugify(slug.decode('utf8'))]['name']
@@ -54,6 +57,7 @@ def main():
         """Convert a sequence of slugs to objects."""
         return [db[data_type][slug] for slug in slugs]
     jinja_env.filters['dateformat'] = dateformat
+    jinja_env.filters['maybealias'] = maybealias
     jinja_env.filters['slugname'] = slugname
     jinja_env.filters['slugobjects'] = slugobjects
     # Create index file.
@@ -98,6 +102,9 @@ def main():
         # Details.
         template = jinja_env.get_template('{data_type}.html'.format(**locals()))
         for obj in object_list:
+            if 'alias_for' in obj:
+                # Don't render aliases.
+                continue
             filename = '{slug}.html'.format(**obj)
             output_filename = os.path.join(
                 output_path,

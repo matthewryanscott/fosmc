@@ -210,6 +210,18 @@ def denormalize(db):
                 cityrecordings = db['city'][cityslug].setdefault('recordings', [])
                 if recordingslug not in cityrecordings:
                     cityrecordings.append(recordingslug)
+    # Link DJs aliases.
+    for dj in db['dj'].values():
+        for alias in dj.get('aliases', []):
+            aliasslug = slugify(alias)
+            if aliasslug not in db['dj']:
+                db['dj'][aliasslug] = dict(
+                    slug=aliasslug,
+                    name=alias,
+                    alias_for=dj['slug'],
+                )
+            else:
+                dj['lint_cannot_clone_alias_' + aliasslug] = True
 
 
 def _populate_slug_and_name(obj):
