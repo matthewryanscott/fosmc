@@ -106,7 +106,7 @@ def load_events(path, db):
 def load_recordings(path, db):
     with open(os.path.join(path, 'recordings.yaml')) as f:
         for recording in yaml.load_all(f):
-            recording.setdefault('name', 'Recording')
+            recording.setdefault('name', 'Live recording')
             recording.setdefault('date', None)
             # Convert single DJ to list of one DJ.
             djs = recording.setdefault('djs', [])
