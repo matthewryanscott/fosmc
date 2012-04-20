@@ -200,8 +200,9 @@ def denormalize(db):
         for djslug in recording['djs']:
             dj = db['dj'][djslug]
             for genreslug in recording.get('genres', []):
-                if genreslug not in dj['genres']:
-                    dj['genres'].append(genreslug)
+                djgenres = dj.setdefault('genres', [])
+                if genreslug not in djgenres:
+                    djgenres.append(genreslug)
     # DJ cities contribute DJ's recordings to city's recordings.
     for dj in db['dj'].itervalues():
         cityslug = dj.get('city', None)
