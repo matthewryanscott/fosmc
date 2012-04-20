@@ -9,6 +9,7 @@ from jinja2.exceptions import TemplateNotFound
 from slugify import slugify
 
 from fosmc.db import load_data
+from fosmc.lint import lint
 
 
 def main():
@@ -19,6 +20,9 @@ def main():
     db_path = os.path.abspath(db_path)
     output_path = os.path.abspath(output_path)
     db = load_data(db_path)
+    if lint(db):
+        print 'Please clean up the lint and try again.'
+        sys.exit(1)
     if os.path.isdir(output_path):
         if '--force' not in sys.argv:
             print 'Output path {output_path} exists; use --force to delete.'.format(**locals())
