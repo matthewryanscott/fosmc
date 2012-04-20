@@ -230,6 +230,14 @@ def denormalize(db):
                 )
             else:
                 dj['lint_cannot_clone_alias_' + aliasslug] = True
+    # Event dates populate recording dates when not present on recordings.
+    for event in db['event'].values():
+        if not event.get('date'):
+            # Event itself doesn't have a date.
+            continue
+        for recordingslug in event.get('recordings', []):
+            if not db['recording'][recordingslug].get('date'):
+                db['recording'][recordingslug]['date'] = event['date']
 
 
 def _populate_slug_and_name(obj):
