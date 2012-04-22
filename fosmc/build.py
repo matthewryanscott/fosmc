@@ -38,8 +38,8 @@ def main():
     jinja_env = jinja2.Environment(
         loader=jinja2.FileSystemLoader(template_path),
     )
-    jinja_env.globals['list'] = list
-    jinja_env.globals['reversed'] = reversed
+    jinja_env.filters['list'] = list
+    jinja_env.filters['reversed'] = reversed
     # Set up command line variables as globals.
     for arg in sys.argv[3:]:
         if '=' in arg:
@@ -51,6 +51,11 @@ def main():
             return date.strftime(format)
         else:
             return str(date)
+    def datesorted(object_list):
+        return sorted(
+            object_list,
+            key=lambda obj: str(obj['date']) if obj.get('date') else None,
+        )
     def maybealias(slug, data_type):
         """Convert a slug of an alias to the original slug."""
         return db[data_type][slug].get('alias_for', slug)
@@ -61,17 +66,16 @@ def main():
         """Convert a sequence of slugs to objects."""
         return [db[data_type][slug] for slug in slugs]
     jinja_env.filters['dateformat'] = dateformat
+    jinja_env.filters['datesorted'] = datesorted
     jinja_env.filters['maybealias'] = maybealias
     jinja_env.filters['slugname'] = slugname
     jinja_env.filters['slugobjects'] = slugobjects
     # Create index file.
     template = jinja_env.get_template('index.html')
     rss_template = jinja_env.get_template('rss.xml')
-    recordings_by_date = sorted(
-        db['recording'].itervalues(),
-        key=lambda v: str(v['date']) if 'date' in v else None,
-    )
-    recordings_by_date = [r for r in recordings_by_date if r.get('date', None)]
+    recordings_by_date = reversed(datesorted(db['recording'].values()))
+    recordings_by_date = [r for r in recordings_by_date if r.get('date')]
+    recordings_by_date = recordings_by_date[:10]
     with open(os.path.join(output_path, 'index.html'), 'wb') as f:
         print 'index.html'
         f.write(template.render(
@@ -84,7 +88,7 @@ def main():
         f.write(rss_template.render(
             root='./',
             static='static/',
-            object_list=list(reversed(recordings_by_date))[:10],
+            object_list=recordings_by_date,
             title='Fresh mixes',
             now=datetime.datetime.now(),
         ))
@@ -142,7 +146,7 @@ def main():
                 with open(output_xml_filename, 'wb') as f:
                     print '{data_type}/{xml_filename}'.format(**locals())
                     f.write(rss_template.render(
-                        object_list=slugobjects(obj.get('recordings', []), 'recording'),
+                        object_list=list(reversed(datesorted(slugobjects(obj.get('recordings', []), 'recording')))),
                         root='../',
                         static='../static/',
                         title=obj['name'],
