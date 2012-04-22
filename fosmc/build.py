@@ -66,6 +66,7 @@ def main():
     jinja_env.filters['slugobjects'] = slugobjects
     # Create index file.
     template = jinja_env.get_template('index.html')
+    rss_template = jinja_env.get_template('rss.xml')
     recordings_by_date = sorted(
         db['recording'].itervalues(),
         key=lambda v: str(v['date']) if 'date' in v else None,
@@ -77,6 +78,15 @@ def main():
             root='./',
             static='static/',
             recordings_by_date=recordings_by_date,
+        ))
+    with open(os.path.join(output_path, 'index.xml'), 'wb') as f:
+        print 'index.xml'
+        f.write(rss_template.render(
+            root='./',
+            static='static/',
+            object_list=recordings_by_date,
+            title='Fresh mixes',
+            now=datetime.datetime.now(),
         ))
     # Create lists and details.
     for data_type in db:
@@ -122,6 +132,22 @@ def main():
                     root='../',
                     static='../static/',
                 ))
+            if data_type is not 'recording':
+                xml_filename = '{slug}.xml'.format(**obj)
+                output_xml_filename = os.path.join(
+                    output_path,
+                    data_type,
+                    xml_filename,
+                )
+                with open(output_xml_filename, 'wb') as f:
+                    print '{data_type}/{xml_filename}'.format(**locals())
+                    f.write(rss_template.render(
+                        object_list=slugobjects(obj.get('recordings', []), 'recording'),
+                        root='../',
+                        static='../static/',
+                        title=obj['name'],
+                        now=datetime.datetime.now(),
+                    ))
     # Copy static files.
     print 'static/*'
     static_path = os.path.join(db_path, 'static')
