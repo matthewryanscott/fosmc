@@ -84,7 +84,7 @@ def main():
         f.write(rss_template.render(
             root='./',
             static='static/',
-            object_list=recordings_by_date,
+            object_list=list(reversed(recordings_by_date))[:10],
             title='Fresh mixes',
             now=datetime.datetime.now(),
         ))
