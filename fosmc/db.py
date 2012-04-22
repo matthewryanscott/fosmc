@@ -248,6 +248,17 @@ def denormalize(db):
         for recordingslug in event.get('recordings', []):
             if not db['recording'][recordingslug].get('date'):
                 db['recording'][recordingslug]['date'] = event['date']
+    # Recording events are used to populate DJs' events, and events' DJs.
+    for recording in db['recording'].values():
+        eventslug = recording.get('event')
+        if eventslug and recording['djs']:
+            eventdjs = db['event'][eventslug].setdefault('djs', [])
+            for djslug in recording['djs']:
+                djevents = db['dj'][djslug].setdefault('events', [])
+                if eventslug not in djevents:
+                    djevents.append(eventslug)
+                if djslug not in eventdjs:
+                    eventdjs.append(djslug)
 
 
 def _populate_slug_and_name(obj):
