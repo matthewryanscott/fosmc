@@ -116,6 +116,9 @@ def load_recordings(path, db):
         for recording in yaml.load_all(f):
             recording.setdefault('name', 'Live recording')
             recording.setdefault('date', None)
+            # Mark missing MP3s as lint.
+            if not recording.get('mp3'):
+                recording['lint_mp3_missing'] = True
             # Convert single DJ to list of one DJ.
             djs = recording.setdefault('djs', [])
             if 'dj' in recording:
