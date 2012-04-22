@@ -113,12 +113,18 @@ def load_events(path, db):
 
 def load_recordings(path, db):
     with open(os.path.join(path, 'recordings.yaml')) as f:
+        mp3_urls = set()  # Keep track of MP3 urls to find duplicates.
         for recording in yaml.load_all(f):
             recording.setdefault('name', 'Live recording')
             recording.setdefault('date', None)
             # Mark missing MP3s as lint.
-            if not recording.get('mp3'):
+            mp3_url = recording.get('mp3')
+            if not mp3_url:
                 recording['lint_mp3_missing'] = True
+            elif mp3_url != 'auto':
+                if mp3_url in mp3_urls:
+                    recording['lint_mp3_duplicate'] = True
+                mp3_urls.add(mp3_url)
             # Convert single DJ to list of one DJ.
             djs = recording.setdefault('djs', [])
             if 'dj' in recording:
