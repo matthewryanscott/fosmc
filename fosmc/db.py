@@ -119,12 +119,16 @@ def load_recordings(path, db):
             recording.setdefault('date', None)
             # Mark missing MP3s as lint.
             mp3_url = recording.get('mp3')
+            mp3high_url = recording.get('mp3high')
             if not mp3_url:
                 recording['lint_mp3_missing'] = True
             elif mp3_url != 'auto':
                 if mp3_url in mp3_urls:
                     recording['lint_mp3_duplicate'] = True
                 mp3_urls.add(mp3_url)
+            if mp3high_url != 'auto':
+                if mp3high_url in mp3_urls:
+                    recording['lint_mp3_duplicate'] = True
             # Convert single DJ to list of one DJ.
             djs = recording.setdefault('djs', [])
             if 'dj' in recording:
