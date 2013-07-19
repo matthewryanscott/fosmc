@@ -138,10 +138,8 @@ def load_recordings(path, db):
                 slugs = []
                 if 'event' in recording:
                     slugs.append(slugify(recording['event']))
-                if len(djs) == 1:
-                    slugs.append(slugify(recording['djs'][0]))
-                elif len(djs) > 1:
-                    slugs.append('multiple')
+                for dj in djs:
+                    slugs.append(slugify(dj))
                 slugs.append(slugify(recording['name']))
                 if recording['date']:
                     if isinstance(recording['date'], datetime.date):
